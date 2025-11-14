@@ -1,1 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>WA COVID-19 Death Rate (per 10k) — Oct 25, 2021</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <!-- Mapbox GL JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+
+    <style>
+        body { margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; }
+        #map { position:absolute; top:60px; bottom:0; width:100%; }
+
+        header {
+            position:absolute;
+            top:0; left:0; right:0; height:60px;
+            background: rgba(255,255,255,0.95);
+            display:flex; align-items:center; padding: 10px 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08); z-index:2;
+        }
+        header h1 { margin:0; font-size:18px; }
+        header p { margin:0 0 0 12px; color:#555; font-size:13px; }
+
+        .legend {
+            position: absolute;
+            bottom: 20px; left: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 6px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .legend div { display:flex; align-items:center; margin-bottom:5px; }
+        .legend span { display:inline-block; width:20px; height:12px; margin-right:8px; }
+
+        .info {
+            position: absolute;
+            top:80px; left:220px;
+            background: rgba(255,255,255,0.95);
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            min-width: 150px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+
+        footer {
+            position: absolute;
+            left: 12px; bottom: 12px;
+            background: rgba(255,255,255,0.95);
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            z-index:2;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Washington State COVID-19 Death Rate (per 10k)</h1>
+        <p>Data through Oct 25, 2021</p>
+    </header>
+
+    <div id="map"></div>
+
+    <div class="legend" id="legend">
+        <h3>Deaths per 10k</h3>
+        <div><span style="background:#f2f0f7"></span>0–10</div>
+        <div><span style="background:#cbc9e2"></span>10–20</div>
+        <div><span style="background:#9e9ac8"></span>20–30</div>
+        <div><span style="background:#756bb1"></span>30–40</div>
+        <div><span style="background:#54278f"></span>40+</div>
+    </div>
+
+    <div class="info" id="info">
+        <span class="label">Hover over a county</span>
+        <div id="infoContent">Name: — <br>Death rate: —</div>
+    </div>
+
+    <footer>
+        Data: NYT / WA DOH / WA OFM / US Census — lab deliverable
+    </footer>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v10',
+            center: [-120.5, 47.3], // Washington State
+            zoom: 6.3
+        });
+
+        map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+
+        const popup = new mapboxgl.Popup({
+            closeButton:false,
+            closeOnClick:false
+        });
+
+        map.on('load', () => {
+            map.addSource('waCovid', {
+                type:'geojson',
+                data:'assets/wa-covid-data-102521.geojson'
+            });
+
+            map.addLayer({
+                id:'waCovid-fill',
+                type:'fill',
+                source:'waCovid',
+                paint:{
+                    'fill-color':[
+                        'interpolate', ['linear'], ['get','deathPer10k'],
+                        0, '#f2f0f7',
+                        10, '#cbc9e2',
+                        20, '#9e9ac8',
+                        30, '#756bb1',
+                        40, '#54278f'
+                    ],
+                    'fill-opacity':0.8
+                }
+            });
+
+            map.addLayer({
+                id:'waCovid-outline',
+                type:'line',
+                source:'waCovid',
+                paint:{
+                    'line-color':'#333',
+                    'line-width':1
+                }
+            });
+
+            map.on('mousemove','waCovid-fill',(e)=>{
+                const props = e.features[0].properties;
+                const name = props.name;
+                const death = props.deathPer10k;
+                popup.setLngLat(e.lngLat)
+                    .setHTML(`<strong>${name}</strong><br>Deaths per 10k: ${death}`)
+                    .addTo(map);
+
+                document.getElementById('infoContent').innerHTML = `Name: <strong>${name}</strong><br>Death rate: <strong>${death}</strong>`;
+                map.getCanvas().style.cursor='pointer';
+            });
+
+            map.on('mouseleave','waCovid-fill',()=>{
+                popup.remove();
+                document.getElementById('infoContent').innerHTML = 'Name: —<br>Death rate: —';
+                map.getCanvas().style.cursor='';
+            });
+        });
+    </script>
+</body>
+</html>
 
